@@ -97,7 +97,7 @@ polyline{
         }
         
         .gauge .indicator {
-            stroke: #EE3311;
+            stroke: #98abc5;
             fill: #98abc5;
             stroke-width: 4px;
         }
@@ -108,7 +108,7 @@ polyline{
         }
 
         .segdisplay .off {
-            fill: #00FFFF;
+            fill: #98abc5;
             opacity: 0.10;
         }
   </style>
@@ -269,7 +269,7 @@ function buildLineGraph() {
     .domain([0, n - 1])
     .range([0, width]);
   var y = d3.scale.linear()
-    .domain([0, 800])
+    .domain([0, 700])
     .range([height, 0]);
   var line = d3.svg.line()
     .x(function(d, i) { return x(i); })
@@ -385,12 +385,12 @@ function buildSpeedometer() {
                 .indicator(iopctrl.defaultGaugeIndicator);
         gauge.axis().orient("in")
                 .normalize(true)
-                .ticks(12)
+                .ticks(6)
                 .tickSubdivide(3)
                 .tickSize(10, 8, 10)
                 .tickPadding(5)
                 .scale(d3.scale.linear()
-                        .domain([0, 500])
+                        .domain([0, 700])
                         .range([-3*Math.PI/4, 3*Math.PI/4]));
 
         var segDisplay = iopctrl.segdisplay()
