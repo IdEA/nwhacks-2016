@@ -242,6 +242,12 @@ var avg1 = 0;
 var total2 = 0;
 var avg2 = 0;
 
+var total3 = 0;
+var avg3 = 0;
+
+var total3 = 0;
+var avg3 = 0;
+
 var ws = new WebSocket("ws://10.19.219.213:81");
 ws.onopen = function() 
 {
@@ -752,12 +758,14 @@ ws.onmessage = function(evt) {
 
 	    total1 += parseInt(msg_array[2]);
 	    total2 += parseInt(msg_array[3]);
+	    total3 += parseInt(msg_array[4]);
+	    total4 += parseInt(msg_array[5]);
 
 	    avg1 = total1/ticks;
 	    avg2 = total2/ticks;
 
 	    lineGraph.update(msg_array[2], msg_array[3], parseInt(msg_array[4]), parseInt(msg_array[5]));
-	    speedometre.update(parseInt(msg_array[2]) + parseInt(msg_array[3]));
+	    speedometre.update(parseInt(msg_array[2]) + parseInt(msg_array[3])+parseInt(msg_array[4])+parseInt(msg_array[5]));
 	    //pie.update();
 
 	    lastmes = received_msg;
