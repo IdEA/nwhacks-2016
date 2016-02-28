@@ -269,7 +269,7 @@ function buildLineGraph() {
     .domain([0, n - 1])
     .range([0, width]);
   var y = d3.scale.linear()
-    .domain([0, 100])
+    .domain([0, 800])
     .range([height, 0]);
   var line = d3.svg.line()
     .x(function(d, i) { return x(i); })
@@ -390,7 +390,7 @@ function buildSpeedometer() {
                 .tickSize(10, 8, 10)
                 .tickPadding(5)
                 .scale(d3.scale.linear()
-                        .domain([0, 160])
+                        .domain([0, 500])
                         .range([-3*Math.PI/4, 3*Math.PI/4]));
 
         var segDisplay = iopctrl.segdisplay()
