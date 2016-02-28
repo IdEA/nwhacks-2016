@@ -155,6 +155,20 @@ float maxCurrent(){
   return current;
 }
 
+float readCurrent(int pin){
+	// they are PNP transistors, to turn them on (connect current sensor to ADC) you write a low
+	if(pin == 1){
+		digitalWrite(current1, LOW);
+		digitalWrite(current2, HIGH);
+		return maxCurrent();
+	}
+	else if(pin==2){
+		digitalWrite(current2, LOW);
+		digitalWrite(current1, HIGH);
+		return maxCurrent();
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
 
@@ -167,7 +181,9 @@ void setup() {
 	pinMode(relay2, OUTPUT);
 	pinMode(current1, OUTPUT);
 	pinMode(current2, OUTPUT);
-	digitalWrite(chipSelectPinADC, HIGH);
+	digitalWrite(chipSelectPinADC, HIGH);	// ADC off
+	digitalWrite(current1, HIGH);
+	digitalWrite(current2, HIGH);	// current sensors disconnected
 
 
 	#ifdef defined(USE_WIFI_AP)
@@ -232,8 +248,7 @@ void setup() {
 void loop() {
 
 	// Current get:
-	// Turn current1 off, current2 on (or vice-versa)
-	// run maxCurrent - returns a float 
+	// run readCurrent(1); - specify current 1 or two. Returns float. 
 	// use digitalwrite(relay1, HIGH), etc to turn on relays
 
 	webSocket.loop();
