@@ -11,6 +11,7 @@
 #include "ThreadController.h"
 
 #include <SPI.h>
+#include <FS.h>
 
 
 ESP8266WebServer webServer(80);
@@ -56,6 +57,11 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 			if(text.startsWith("r") && text.length() == 3) {
 				char relay = text.charAt(1);
 				char state = text.charAt(2);
+				if(relay == '1') {
+					digitalWrite(1, state == '1' ? HIGH : LOW);
+				} else if(relay == '2') {
+					digitalWrite(2, state == '1' ? HIGH : LOW);
+				}
 				String res = "setting relay ";
 				res.concat(relay);
 				res.concat(" to state ");
@@ -106,11 +112,14 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 
 
 void currentThreadCallback() {
-	const int current = analogRead(A0);
 	String val = "data:current:";
-	val.concat(current);
+	val.concat(readCurrent(1));
 	val.concat(":");
-	val.concat(current + 20);
+	val.concat(readCurrent(2));
+	val.concat(":");
+	val.concat(random(20,40));
+	val.concat(":");
+	val.concat(random(40,50));
 	Serial.println(val);
 	webSocket.broadcastTXT(val);
 }
@@ -120,7 +129,6 @@ void diagnosticsThreadCallback() {
 	val.concat(millis());
 	val.concat(":");
 	val.concat(ESP.getFreeHeap());
-	val.concat(":");
 	Serial.println(val);
 	webSocket.broadcastTXT(val);
 }
@@ -183,6 +191,7 @@ float readCurrent(int pin){
 }
 
 void setup() {
+	SPIFFS.begin();
 	Serial.begin(115200);
 
 	// SPI and Pin Setup
@@ -247,6 +256,8 @@ void setup() {
 
 	webServer.on("/", handleRoot);
 	webServer.on("/gzip", handleGZIP);
+	webServer.onFileUpload(handleFileUpload);
+	webServer.on("/update", HTTP_POST, handleUploadPost);
 	webServer.begin();
 	Serial.println("WebSocket server started\nHTTP server started\nReady...");
 
@@ -281,8 +292,72 @@ void handleRoot() {
   webServer.send(200, "text/html", toSend);
 }
 
+File f;
+String uploadError;
+
 void handleGZIP() {
   Serial.println("GZIP page served");
+  f = SPIFFS.open("site.bin", "r");
   String toSend = "fake gzip";
   webServer.send(200, "text/html", toSend);
+}
+
+void handleFileUpload() {
+	if(webServer.uri() != "/update") return;
+	HTTPUpload& upload = webServer.upload();
+	if(upload.status == UPLOAD_FILE_START){
+		Serial.setDebugOutput(true);
+		WiFiUDP::stopAll();
+		Serial.printf("Update: %s\n", upload.filename.c_str());
+
+		//  (1) Rename the old file
+		if (SPIFFS.exists(upload.filename.c_str()))
+		{
+			SPIFFS.rename(upload.filename.c_str(),(upload.filename+".BAK").c_str());
+		}
+		//  (2) Create the new file
+		f = SPIFFS.open(upload.filename.c_str(), "w+");
+		uploadError = "";
+
+	} else if(upload.status == UPLOAD_FILE_WRITE){
+		// (1) Append this buffer to the end of the open file
+		if (f.write(upload.buf, upload.currentSize) != upload.currentSize){
+			uploadError = "Error writing file chunk";
+		}
+		else
+		{
+			Serial.printf("Wrote bytes: %d\n", upload.currentSize);
+		}
+
+	} else if(upload.status == UPLOAD_FILE_END){
+
+		// Close the file
+		f.close();
+		// (1) Check if the update was successful
+		// (2) If Successful, close the file and delete the renamed one
+		// (3) If failed, close and delete the new file and move the renamed one back in place
+		if (uploadError == "")
+		{
+			Serial.printf("Upload error: %s\n", uploadError.c_str());
+			SPIFFS.remove((upload.filename+".BAK").c_str());
+		}
+		else
+		{
+			Serial.printf("Error uploading new file putting old file back in place: %s\n", upload.filename.c_str());
+			SPIFFS.remove((upload.filename).c_str());
+			SPIFFS.rename((upload.filename+".BAK").c_str(), upload.filename.c_str());
+		}
+
+		Serial.setDebugOutput(false);
+	}
+	yield();
+}
+
+void handleUploadPost() {
+	webServer.sendHeader("Connection", "close");
+	webServer.sendHeader("Access-Control-Allow-Origin", "*");
+
+	//webServer.send(200, "text/plain", (Update.hasError())?"FAIL":"OK");
+	// TODO: Send back information based on whether the upload was successful.
+	webServer.send(200, "text/plain", uploadError);
 }
