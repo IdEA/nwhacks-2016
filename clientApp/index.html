@@ -56,7 +56,7 @@ svg {
 .axis path,
 .axis line {
   fill: none;
-  stroke: #000;
+  stroke: #98abc5;
   shape-rendering: crispEdges;
 }
 
@@ -242,6 +242,12 @@ var avg1 = 0;
 var total2 = 0;
 var avg2 = 0;
 
+var total3 = 0;
+var avg3 = 0;
+
+var total3 = 0;
+var avg3 = 0;
+
 var ws = new WebSocket("ws://10.19.219.213:81");
 ws.onopen = function() 
 {
@@ -279,12 +285,21 @@ function buildLineGraph() {
     .attr("width", width)
     .attr("height", height);
   svg.append("g")
+      .style("stroke", "#98abc5")
     .attr("class", "x axis")
     .attr("transform", "translate(0," + y(0) + ")")
     .call(d3.svg.axis().scale(x).orient("bottom"));
   svg.append("g")
     .attr("class", "y axis")
-    .call(d3.svg.axis().scale(y).orient("left"));
+      .style("stroke", "#98abc5")
+    .call(d3.svg.axis().scale(y).orient("left"))
+    .append("text")
+      .style("stroke", "#98abc5")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Power Usage (W)");
   var path1 = svg.append("g")
     .attr("clip-path", "url(#clip)")
     .append("path")
@@ -672,18 +687,20 @@ function buildBarChart() {
 
   svg.append("g")
       .attr("class", "x axis")
+      .style("stroke", "#98abc5")
       .attr("transform", "translate(0," + height + ")")
       .call(xAxis);
 
   svg.append("g")
       .attr("class", "y axis")
+      .style("stroke", "#98abc5")
       .call(yAxis)
     .append("text")
       .attr("transform", "rotate(-90)")
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
-      .text("Power Usage");
+      .text("Power Usage (W)");
 
   var state = svg.selectAll(".state")
       .data(data)
@@ -713,6 +730,7 @@ function buildBarChart() {
       .style("fill", color);
 
   legend.append("text")
+      .style("stroke", "#98abc5")
       .attr("x", width - 24)
       .attr("y", 9)
       .attr("dy", ".35em")
@@ -739,12 +757,14 @@ ws.onmessage = function(evt) {
 
 	    total1 += parseInt(msg_array[2]);
 	    total2 += parseInt(msg_array[3]);
+	    total3 += parseInt(msg_array[4]);
+	    total4 += parseInt(msg_array[5]);
 
 	    avg1 = total1/ticks;
 	    avg2 = total2/ticks;
 
 	    lineGraph.update(msg_array[2], msg_array[3], parseInt(msg_array[4]), parseInt(msg_array[5]));
-	    speedometre.update(parseInt(msg_array[2]) + parseInt(msg_array[3]));
+	    speedometre.update(parseInt(msg_array[2]) + parseInt(msg_array[3])+parseInt(msg_array[4])+parseInt(msg_array[5]));
 	    //pie.update();
 
 	    lastmes = received_msg;
