@@ -30,7 +30,7 @@ var config = {
     },
 
     // define duration beetwen each dashboard rotation (ms)
-    rotationDuration: 1000,
+    rotationDuration: 10000,
 
     dashboards: [
 
@@ -95,48 +95,12 @@ var config = {
                     x: 1, y: 2
                 },
                 {
-                    type: 'github.status',
+                    type: 'esp.esp_status',
                     columns: 1, rows: 1,
                     x: 0, y: 2
                 }
             ]
         },
-
-        // second dashboard
-        {
-            // 3 x 2 dashboard
-            columns: 3,
-            rows:    2,
-            widgets: [
-                {
-                    type: 'travis.build_history',
-                    owner: 'plouc',
-                    repository: 'mozaik',
-                    columns: 1, rows: 2,
-                    x: 0, y: 0
-                },
-                {
-                    type: 'github.user_badge',
-                    user: 'plouc',
-                    columns: 1, rows: 1,
-                    x: 2, y: 0
-                },
-                {
-                    type: 'travis.repository',
-                    owner: 'plouc',
-                    repository: 'mozaik',
-                    columns: 1, rows: 1,
-                    x: 1, y: 0
-                },
-                {
-                    type: 'travis.build_histogram',
-                    owner: 'plouc',
-                    repository: 'mozaik',
-                    columns: 2, rows: 1,
-                    x: 1, y: 1
-                }
-            ]
-        }
     ]
 };
 

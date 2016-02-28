@@ -6,10 +6,14 @@
 #include <Hash.h>
 
 #include <ArduinoOTA.h>
+#include <ArduinoOTA.h>
+#include "Thread.h"
+#include "ThreadController.h"
 
 ESP8266WebServer webServer(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 
+#define SENSOR_POLL_RATE_HZ 1
 #define USE_WIFI_STA//USE_WIFI_AP
 
 #if defined(USE_WIFI_AP)
@@ -20,9 +24,8 @@ const char* ssid = "nwHACKS";
 const char* pass = "welcometoUBC!";
 #endif
 
-const int bluePin = 13;
-const int redPin = 15;
-const int greenPin = 12;
+ThreadController threadController = ThreadController();
+
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
 	switch(type) {
 		case WStype_DISCONNECTED: {
@@ -33,39 +36,45 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 		} case WStype_TEXT: {
 
 			String text = String((char *) &payload[0]);
+
+			// r[relay][state]
+			if(text.startsWith("r") && text.length() == 3) {
+				char relay = text.charAt(1);
+				char state = text.charAt(2);
+				String res = "setting relay ";
+				res.concat(relay);
+				res.concat(" to state ");
+				res.concat(state);
+				Serial.println(res);
+				webSocket.sendTXT(num, res);
+			}
+
 			if(text=="LED"){
-				digitalWrite(13,HIGH);
-				delay(500);
-				digitalWrite(13,LOW);
 				Serial.println("led just lit");
-				webSocket.sendTXT(num, "led just lit", length);
+				webSocket.sendTXT(num, "led just lit");
 			}
 
 			if(text.startsWith("x")){
 				String xVal=(text.substring(text.indexOf("x")+1,text.length())); 
 				int xInt = xVal.toInt();
-				analogWrite(redPin,xInt); 
 				Serial.println(xVal);
-				webSocket.sendTXT(num, "red changed", length);
+				webSocket.sendTXT(num, "red changed");
 			}
 
 			if(text.startsWith("y")){
 				String yVal=(text.substring(text.indexOf("y")+1,text.length())); 
 				int yInt = yVal.toInt();
-				analogWrite(greenPin,yInt); 
 				Serial.println(yVal);
-				webSocket.sendTXT(num, "green changed", length);
+				webSocket.sendTXT(num, "green changed");
 			}
 
 			if(text.startsWith("z")){
 				String zVal=(text.substring(text.indexOf("z")+1,text.length())); 
 				int zInt = zVal.toInt();
-				analogWrite(bluePin,zInt); 
 				Serial.println(zVal);
-				webSocket.sendTXT(num, "blue changed", length);
+				webSocket.sendTXT(num, "blue changed");
 			}
 
-			webSocket.sendTXT(num, payload, length);
 			webSocket.broadcastTXT(payload, length);
 			break;
 		} case WStype_BIN: {
@@ -80,6 +89,14 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 
 }
 
+
+void currentThreadCallback() {
+	const int current = analogRead(A0);
+	String val = "data:current:";
+	val.concat(current);
+	Serial.println(val);
+	webSocket.broadcastTXT(val);
+}
 
 void setup() {
 	Serial.begin(115200);
@@ -128,19 +145,35 @@ void setup() {
 	webSocket.begin();
 	webSocket.onEvent(webSocketEvent);
 
+
 	webServer.on("/", handleRoot);
+	webServer.on("/gzip", handleGZIP);
 	webServer.begin();
 	Serial.println("WebSocket server started\nHTTP server started\nReady...");
+
+	// Threading
+	Thread *currentThread = new Thread();
+	currentThread->setInterval(1000/SENSOR_POLL_RATE_HZ);
+	currentThread->onRun(currentThreadCallback);
+
+	threadController.add(currentThread);
 }
 
 void loop() {
 	webSocket.loop();
 	webServer.handleClient();
 	ArduinoOTA.handle();
+	threadController.run();
 }
 
 void handleRoot() {
   Serial.println("Page served");
   String toSend = "Hello!";
+  webServer.send(200, "text/html", toSend);
+}
+
+void handleGZIP() {
+  Serial.println("GZIP page served");
+  String toSend = "fake gzip";
   webServer.send(200, "text/html", toSend);
 }
