@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/css/materialize.min.css">
 
   <script src="http://d3js.org/d3.v3.min.js"></script>
-
+  <script src="https://raw.githubusercontent.com/benkeen/d3pie/0.1.8/d3pie/d3pie.min.js"></script>
   <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Play:700,400' type='text/css'>
     <script type="text/javascript" src="http://iop.io/js/vendor/polymer/PointerEvents/pointerevents.js"></script>
     <script type="text/javascript" src="http://iop.io/js/vendor/polymer/PointerGestures/pointergestures.js"></script>
@@ -36,7 +36,12 @@ svg {
 .line {
   fill: none;
   stroke: #000;
-  stroke-width: 1.5px;
+  stroke-width: 2px;
+}
+.line2 {
+  fill: none;
+  stroke:red;
+  stroke-width: 2px;
 }
 .axis path,
 .axis line {
@@ -97,8 +102,7 @@ svg {
       <div id="total_usage" class="card blue-grey darken-3 h1_3">
         <div class="card-content white-text center-align">
           <span class="card-title">Total Usage</span>
-          <p>I am a very simple card. I am good at containing small bits of information.
-          I am convenient because I require little markup to use effectively.</p>
+		<div id="pie"></div>
         </div>
       </div>
 
@@ -211,6 +215,16 @@ svg {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/js/materialize.min.js"></script>
 <script>
 
+var ticks = 0;
+var ttotal = 0;
+var tavg = 0;
+
+var total1 = 0;
+var avg1 = 0;
+
+var total2 = 0;
+var avg2 = 0;
+
 var ws = new WebSocket("ws://10.19.223.194:81");
 ws.onopen = function() 
 {
@@ -221,7 +235,8 @@ function buildLineGraph() {
   var n = 60,
       //random = d3.random.normal(0, .2),
       random = function() { return Math.random() * 100},
-      data = d3.range(n).map(random);
+      data1 = d3.range(n).map(random);
+      data2 = d3.range(n).map(random);
   var margin = {top: 30, right: 60, bottom: 30, left: 60},
       width = 1420 - margin.left - margin.right, //1300
       height = 580 - margin.top - margin.bottom;
@@ -251,24 +266,41 @@ function buildLineGraph() {
   svg.append("g")
     .attr("class", "y axis")
     .call(d3.svg.axis().scale(y).orient("left"));
-  var path = svg.append("g")
+  var path1 = svg.append("g")
     .attr("clip-path", "url(#clip)")
     .append("path")
-    .datum(data)
+    .datum(data1)
     .attr("class", "line")
     .attr("d", line);
-  return {update: function(newData) {
-		  data.push(parseInt(newData));
+  var path2 = svg.append("g")
+    .attr("clip-path", "url(#clip)")
+    .append("path")
+    .datum(data2)
+    .attr("class", "line2")
+    .attr("d", line);
+  return {update: function(newData1, newData2) {
+		  data1.push(parseInt(newData1));
 		  // redraw the line, and slide it to the left
-		  path
+		  path1
 		      .attr("d", line)
 		      .attr("transform", null)
 		    .transition()
 		      .duration(1000)
 		      .ease("linear")
 		      .attr("transform", "translate(" + x(-1) + ",0)");
-		  // pop the old data point off the front
-		  data.shift();
+		  // pop the old data1 point off the front
+		  data1.shift();
+		  data2.push(parseInt(newData2));
+		  // redraw the line, and slide it to the left
+		  path2
+		      .attr("d", line)
+		      .attr("transform", null)
+		    .transition()
+		      .duration(1000)
+		      .ease("linear")
+		      .attr("transform", "translate(" + x(-1) + ",0)");
+		  // pop the old data1 point off the front
+		  data2.shift();
     }};
 }
 
@@ -320,15 +352,98 @@ function buildSpeedometer() {
 
 }
 
+function buildPie() {
+	var data1 = [{
+			"name":"Outlet 1",
+			"value":Math.floor(avg1)
+	             }, {
+			"name":"Outlet 2",
+			"value":Math.floor(avg2)
+		     }];
+	var width = 250;
+	var height = 250;
+	var radius = 250/2;
+	var color = d3.scale.ordinal()
+			    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+	var arc = d3.svg.arc()
+		.outerRadius(radius-10)
+		.innerRadius(radius-70);
+	var pie = d3.layout.pie()
+		.sort(null)
+		.value(function(d) {
+			return d.value;
+		});
+	var svg = d3.select("#pie").append("svg")
+		.attr("width", width)
+		.attr("height", height)
+		.append("g")
+		.attr("id", "pieChart")
+		.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+	var path = svg.selectAll("path")
+		.data(pie(data1))
+		.enter()
+		.append("path");
+
+	path.transition()
+		.duration(1000)
+		.attr("fill", function(d, i) {
+			return color(d.data.name);
+		})
+		.attr("d", arc)
+		.each(function(d) {
+			this._current = d;
+		});
+
+	function arcTween(a) {
+		var i = d3.interpolate(this._current, a);
+		this._current = i(0);
+		return function(t) {
+			return arc(i(t));
+		}
+	}
+			
+	return {update: function(newData) {
+		console.log("WITHIN: " + avg1);
+
+	var data2 = [{
+			"name":"Outlet 1",
+			"value":Math.floor(avg1)
+	             }, {
+			"name":"Outlet 2",
+			"value":Math.floor(avg2)
+		     }];
+		path.data(pie(data2));
+		path.transition().duration(1000)
+			.attrTween("d", arcTween);
+		}};
+
+}
+	
 var lineGraph = buildLineGraph();
 var speedometre = buildSpeedometer();
+var pie = buildPie();
 
 ws.onmessage = function(evt) {
 	var received_msg = evt.data;
 	var msg_array = received_msg.split(':');
 	if (msg_array[1] === 'current'){
-	    lineGraph.update(msg_array[2]);
-	    speedometre.update(msg_array[2]);
+	    ttotal += parseInt(msg_array[2]) + parseInt(msg_array[3]);
+	    ticks++;
+	    tavg = ttotal/ticks;
+
+	    total1 += parseInt(msg_array[2]);
+	    total2 += parseInt(msg_array[3]);
+
+	    avg1 = total1/ticks;
+	    avg2 = total2/ticks;
+
+	    lineGraph.update(msg_array[2], msg_array[3]);
+	    speedometre.update(parseInt(msg_array[2]) + parseInt(msg_array[3]));
+	    pie.update();
+	    console.log("Total Average: " + tavg);
+	    console.log("Average 1: " + avg1);
+	    console.log("Average 2: " + avg2);
 	}
 
 }
