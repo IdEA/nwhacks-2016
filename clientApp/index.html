@@ -156,7 +156,7 @@ polyline{
 
           <div class="row">
             <div class="col s6">
-                <span>Bedroom</span>
+                <span style="color: #98abc5">Bedroom</span>
             </div>
             <div class="col s6">
               <div class="switch">
@@ -172,7 +172,7 @@ polyline{
 
           <div class="row">
             <div class="col s6">
-                <span>Kitchen</span>
+                <span style="color: #98abc5">Kitchen</span>
             </div>
             <div class="col s6">
               <div class="switch">
@@ -188,7 +188,7 @@ polyline{
 
           <div class="row">
             <div class="col s6">
-                <span>Washroom</span>
+                <span style="color: #98abc5">Washroom</span>
             </div>
             <div class="col s6">
               <div class="switch">
@@ -204,7 +204,7 @@ polyline{
 
           <div class="row">
             <div class="col s6">
-                <span>Living Room</span>
+                <span style="color: #98abc5">Living Room</span>
             </div>
             <div class="col s6">
               <div class="switch">
@@ -776,11 +776,13 @@ ws.onmessage = function(evt) {
 		uptime = parseInt(msg_array[1]);
 		freemem = parseInt(msg_array[2]);
 	}
-	    document.getElementById("log").innerHTML = 
-		"Outlet IP: 10.19.223.194 <br /> " +
-	    	"Uptime: " + Math.floor(uptime/1000/60/60) + "h" + Math.floor(uptime/1000/60%60) + "m" + Math.floor(uptime/1000%60) + "s" + "<br />" + 
-		"Free Memory: " + freemem/1000 + "kb" +  "<br />" + 
+	    var logElem = document.getElementById("log");
+      logElem.innerHTML = 
+        "<br/>Outlet IP: 10.19.223.194 <br /><br/> " +
+        "Uptime: " + Math.floor(uptime/1000/60/60) + "h" + Math.floor(uptime/1000/60%60) + "m" + Math.floor(uptime/1000%60) + "s" + "<br /><br/>" + 
+        "Free Memory: " + freemem/1000 + "kb" +  "<br /><br/>" + 
 		"Last Message: " + lastmes;
+      logElem.style.color = "#98abc5";
 
 }
 function relayChange(switchElem, relayNum) {
