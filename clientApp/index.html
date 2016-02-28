@@ -3,7 +3,14 @@
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/css/materialize.min.css">
+
   <script src="http://d3js.org/d3.v3.min.js"></script>
+
+  <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Play:700,400' type='text/css'>
+    <script type="text/javascript" src="http://iop.io/js/vendor/polymer/PointerEvents/pointerevents.js"></script>
+    <script type="text/javascript" src="http://iop.io/js/vendor/polymer/PointerGestures/pointergestures.js"></script>
+    <script type="text/javascript" src="http://iop.io/js/iopctrl.js"></script>
+    
   <style>
 html {
   overflow-y: hidden;
@@ -37,6 +44,49 @@ svg {
   stroke: #000;
   shape-rendering: crispEdges;
 }
+
+/* css formats for the gauge */
+        .gauge .domain {
+            stroke-width: 2px;
+            stroke: #fff;
+        }
+
+        .gauge .tick line {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+        
+        .gauge line {
+            stroke: #fff;
+        }
+
+        .gauge .arc, .gauge .cursor {
+            opacity: 0;
+        }
+
+        .gauge .major {
+            fill: #fff;
+            font-size: 20px;
+            font-family: 'Play', verdana, sans-serif;
+            font-weight: normal;
+        }
+        
+        .gauge .indicator {
+            stroke: #EE3311;
+            fill: #000;
+            stroke-width: 4px;
+        }
+
+        /* css formats for the segment display */
+        .segdisplay .on {
+            fill: #00FFFF;
+
+        }
+
+        .segdisplay .off {
+            fill: #00FFFF;
+            opacity: 0.15;
+        }
   </style>
   <title>smartOutlet</title>
 </head>
@@ -64,10 +114,8 @@ svg {
     </div>
     <div class="col s3">
       <div class="card blue-grey darken-3 h1_3">
-        <div class="card-content white-text center-align">
+        <div id="live_usage" class="card-content white-text center-align">
           <span class="card-title">Live Usage</span>
-          <p>I am a very simple card. I am good at containing small bits of information.
-          I am convenient because I require little markup to use effectively.</p>
         </div>
       </div>
     </div>
@@ -224,20 +272,62 @@ function buildLineGraph() {
     }};
 }
 
+function buildSpeedometer() {
+	var svg = d3.select("#live_usage")
+                .append("svg:svg")
+                .attr("width", 400)
+                .attr("height", 400);
+
+
+        var gauge = iopctrl.arcslider()
+                .radius(120)
+                .events(false)
+                .indicator(iopctrl.defaultGaugeIndicator);
+        gauge.axis().orient("in")
+                .normalize(true)
+                .ticks(12)
+                .tickSubdivide(3)
+                .tickSize(10, 8, 10)
+                .tickPadding(5)
+                .scale(d3.scale.linear()
+                        .domain([0, 160])
+                        .range([-3*Math.PI/4, 3*Math.PI/4]));
+
+        var segDisplay = iopctrl.segdisplay()
+                .width(80)
+                .digitCount(6)
+                .negative(false)
+                .decimals(0);
+
+        svg.append("g")
+                .attr("class", "segdisplay")
+                .attr("transform", "translate(130, 200)")
+                .call(segDisplay);
+
+        svg.append("g")
+                .attr("class", "gauge")
+                .call(gauge);
+
+        segDisplay.value(56749);
+        gauge.value(92);
+    
+
+	return {update: function(newData) {
+		gauge.value(newData);
+		segDisplay.value(newData);
+		}};
+
+}
+
 var lineGraph = buildLineGraph();
+var speedometre = buildSpeedometer();
 
 ws.onmessage = function(evt) {
 	var received_msg = evt.data;
-	//if (Date.now() - time > 10000) {
 	var msg_array = received_msg.split(':');
 	if (msg_array[1] === 'current'){
-		time = Date.now();
-		//alert("HELLO");
-		//alert(msg_array);
-
-		var newData = {x: 59, y:Math.round(Math.random()*200) + 500};
-
-    lineGraph.update(msg_array[2]);
+	    lineGraph.update(msg_array[2]);
+	    speedometre.update(msg_array[2]);
 	}
 
 }
