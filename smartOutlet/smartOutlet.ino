@@ -16,7 +16,8 @@
 ESP8266WebServer webServer(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 
-#define SENSOR_POLL_RATE_HZ 1
+#define CURRENT_PUSH_RATE 1
+#define DIAGNOSTICS_PUSH_RATE 0.25
 #define USE_WIFI_STA//USE_WIFI_AP
 
 // Some variables for the current measurement
@@ -108,6 +109,18 @@ void currentThreadCallback() {
 	const int current = analogRead(A0);
 	String val = "data:current:";
 	val.concat(current);
+	val.concat(":");
+	val.concat(current + 20);
+	Serial.println(val);
+	webSocket.broadcastTXT(val);
+}
+
+void diagnosticsThreadCallback() {
+	String val = "diag:";
+	val.concat(millis());
+	val.concat(":");
+	val.concat(ESP.getFreeHeap());
+	val.concat(":");
 	Serial.println(val);
 	webSocket.broadcastTXT(val);
 }
@@ -239,10 +252,15 @@ void setup() {
 
 	// Threading
 	Thread *currentThread = new Thread();
-	currentThread->setInterval(1000/SENSOR_POLL_RATE_HZ);
+	currentThread->setInterval(1000/CURRENT_PUSH_RATE);
 	currentThread->onRun(currentThreadCallback);
 
+	Thread *diagnosticsThread = new Thread();
+	diagnosticsThread->setInterval(1000/DIAGNOSTICS_PUSH_RATE);
+	diagnosticsThread->onRun(diagnosticsThreadCallback);
+
 	threadController.add(currentThread);
+	threadController.add(diagnosticsThread);
 }
 
 void loop() {
