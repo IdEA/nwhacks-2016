@@ -116,9 +116,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 
 void currentThreadCallback() {
 	String val = "data:current:";
-	val.concat(readCurrent(1));
+	val.concat(maxCurrent());
 	val.concat(":");
-	val.concat(readCurrent(2));
+	val.concat(random(30, 70));
 	val.concat(":");
 	val.concat(random(20,40));
 	val.concat(":");
