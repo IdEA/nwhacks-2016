@@ -9,6 +9,7 @@
 #include <ArduinoOTA.h>
 #include "Thread.h"
 #include "ThreadController.h"
+#include "Base64.h"
 
 #include <SPI.h>
 
@@ -108,6 +109,8 @@ void currentThreadCallback() {
 	const int current = analogRead(A0);
 	String val = "data:current:";
 	val.concat(current);
+	val.concat(":");
+	val.concat(current+20);
 	Serial.println(val);
 	webSocket.broadcastTXT(val);
 }
@@ -263,8 +266,52 @@ void handleRoot() {
   webServer.send(200, "text/html", toSend);
 }
 
+char input2[] =
+"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\n"
+"";
+
 void handleGZIP() {
   Serial.println("GZIP page served");
-  String toSend = "fake gzip";
-  webServer.send(200, "text/html", toSend);
+  Serial.println(input2);
+  int input2Len = sizeof(input2);
+  Serial.print("input2len: ");
+  Serial.println(input2Len);
+  int decodedLen = base64_dec_len(input2, input2Len);
+  Serial.println(decodedLen);
+  char decoded[decodedLen];
+  base64_decode(decoded, input2, input2Len);
+  Serial.println(decoded);
+
+  webServer.sendHeader("Content-Encoding", "gzip", false);
+  webServer.send_c(200, "text/html", decoded, decodedLen);
 }
