@@ -22,6 +22,21 @@ body {
 .h1_3 {
   height: 340px;
 }
+
+svg {
+  font: 10px sans-serif;
+}
+.line {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
   </style>
   <title>smartOutlet</title>
 </head>
@@ -148,116 +163,83 @@ body {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/js/materialize.min.js"></script>
 <script>
 
-var data = [];
-for (i = 0; i < 60; i++) {
-  data[i] = {x: i, y: Math.round(Math.random()*200) + 500};
-}
-
-// Open Websocket Connection
 var ws = new WebSocket("ws://10.19.223.194:81");
 ws.onopen = function() 
 {
-  ws.send("x4");
+	ws.send("x4");
 }
+
+function buildLineGraph() {
+  var n = 60,
+      //random = d3.random.normal(0, .2),
+      random = function() { return Math.random() * 100},
+      data = d3.range(n).map(random);
+  var margin = {top: 30, right: 60, bottom: 30, left: 60},
+      width = 1420 - margin.left - margin.right, //1300
+      height = 580 - margin.top - margin.bottom;
+  var x = d3.scale.linear()
+    .domain([0, n - 1])
+    .range([0, width]);
+  var y = d3.scale.linear()
+    .domain([0, 100])
+    .range([height, 0]);
+  var line = d3.svg.line()
+    .x(function(d, i) { return x(i); })
+    .y(function(d, i) { return y(d); });
+  var svg = d3.select("#hourly_usage").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+    .append("rect")
+    .attr("width", width)
+    .attr("height", height);
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + y(0) + ")")
+    .call(d3.svg.axis().scale(x).orient("bottom"));
+  svg.append("g")
+    .attr("class", "y axis")
+    .call(d3.svg.axis().scale(y).orient("left"));
+  var path = svg.append("g")
+    .attr("clip-path", "url(#clip)")
+    .append("path")
+    .datum(data)
+    .attr("class", "line")
+    .attr("d", line);
+  return {update: function(newData) {
+		  data.push(parseInt(newData));
+		  // redraw the line, and slide it to the left
+		  path
+		      .attr("d", line)
+		      .attr("transform", null)
+		    .transition()
+		      .duration(1000)
+		      .ease("linear")
+		      .attr("transform", "translate(" + x(-1) + ",0)");
+		  // pop the old data point off the front
+		  data.shift();
+    }};
+}
+
+var lineGraph = buildLineGraph();
 
 ws.onmessage = function(evt) {
-  var received_msg = evt.data;
-  console.log(received_msg);
-  for (i = 0; i < 60; i++) {
-    data[i] = {x: i, y: Math.round(Math.random()*200) + 500};
-  }
-  updateData();
-}
+	var received_msg = evt.data;
+	//if (Date.now() - time > 10000) {
+	var msg_array = received_msg.split(':');
+	if (msg_array[1] === 'current'){
+		time = Date.now();
+		//alert("HELLO");
+		//alert(msg_array);
 
-var range = 1000;
+		var newData = {x: 59, y:Math.round(Math.random()*200) + 500};
 
-// Set the dimensions of the canvas / graph
-var margin = {top: 30, right: 60, bottom: 30, left: 60},
-    width = 1300,
-    height = 530;
+    lineGraph.update(msg_array[2]);
+	}
 
-// Parse the date / time
-var parseDate = d3.time.format("%d-%b-%y").parse;
-
-// Set the ranges
-var x = d3.scale.linear().range([0, width]);
-var y = d3.scale.linear().range([height, 0]);
-
-// Define the axes
-var xAxis = d3.svg.axis().scale(x)
-    .orient("bottom").ticks(60);
-
-var yAxis = d3.svg.axis().scale(y)
-    .orient("left").ticks(5);
-
-// Define the line
-var valueline = d3.svg.line()
-    .x(function(d) { return x(d.x); })
-    .y(function(d) { return y(d.y); });
-    
-// Adds the svg canvas
-var svg = d3.select("#hourly_usage")
-    .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-        .attr("transform", 
-              "translate(" + margin.left + "," + margin.top + ")");
-
-// Get the data
-/*
-d3.csv("data.csv", function(error, data) {
-    data.forEach(function(d) {
-        d.date = parseDate(d.date);
-        d.close = +d.close;
-    });
-    */
-
-    // Scale the range of the data
-    x.domain(d3.extent(data, function(d) { return d.x; }));
-    //y.domain([0, d3.max(data, function(d) { return d.y; })]);
-    y.domain([0,range]);
-
-    // Add the valueline path.
-    svg.append("path")
-        .attr("class", "line")
-        .attr("d", valueline(data));
-
-    // Add the X Axis
-    svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
-	svg.selectAll("text").remove();
-
-    // Add the Y Axis
-    svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis);
-
-//});
-function updateData() {
-
-// Scale the range of the data again 
-x.domain(d3.extent(data, function(d) { return d.x; }));
-//	    y.domain([0, d3.max(data, function(d) { return d.y; })]);
-    y.domain([0,range]);
-
-    // Select the section we want to apply our changes to
-    var svg = d3.select("body").transition();
-
-    // Make the changes
-        svg.select(".line")   // change the line
-            .duration(750)
-            .attr("d", valueline(data));
-        svg.select(".x.axis") // change the x axis
-            .duration(750)
-            .call(xAxis);
-        svg.select(".y.axis") // change the y axis
-            .duration(750)
-            .call(yAxis);
-
-    //});
 }
 </script>
 </body>

@@ -65,7 +65,6 @@ var path = svg.append("g")
     .datum(data)
     .attr("class", "line")
     .attr("d", line);
-tick();
 ws.onmessage = function(evt) {
 	var received_msg = evt.data;
 	//if (Date.now() - time > 10000) {
@@ -88,23 +87,7 @@ ws.onmessage = function(evt) {
 		  // pop the old data point off the front
 		  data.shift();
 
-//		tick(newData);
 	}
 
-}
-function tick() {
-  // push a new data point onto the back
-  data.push(random());
-  // redraw the line, and slide it to the left
-  path
-      .attr("d", line)
-      .attr("transform", null)
-    .transition()
-      .duration(500)
-      .ease("linear")
-      .attr("transform", "translate(" + x(-1) + ",0)")
-      .each("end", tick);
-  // pop the old data point off the front
-  data.shift();
 }
 </script>
