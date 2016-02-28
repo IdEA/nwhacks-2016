@@ -35,13 +35,23 @@ svg {
 }
 .line {
   fill: none;
-  stroke: #000;
-  stroke-width: 2px;
+  stroke: #98abc5;
+  stroke-width: 4px;
 }
 .line2 {
   fill: none;
-  stroke:red;
-  stroke-width: 2px;
+  stroke:#8a89a6;
+  stroke-width: 4px;
+}
+.line3 {
+  fill: none;
+  stroke:#7b6888;
+  stroke-width: 4px;
+}
+.line4 {
+  fill: none;
+  stroke:#6b486b;
+  stroke-width: 4px;
 }
 .axis path,
 .axis line {
@@ -63,16 +73,16 @@ polyline{
 /* css formats for the gauge */
         .gauge .domain {
             stroke-width: 2px;
-            stroke: #fff;
+            stroke: #6b486b;
         }
 
         .gauge .tick line {
-            stroke: #fff;
+            stroke: #6b486b;
             stroke-width: 2px;
         }
         
         .gauge line {
-            stroke: #fff;
+            stroke: #98abc5;
         }
 
         .gauge .arc, .gauge .cursor {
@@ -80,7 +90,7 @@ polyline{
         }
 
         .gauge .major {
-            fill: #fff;
+            fill: #98abc5;
             font-size: 20px;
             font-family: 'Play', verdana, sans-serif;
             font-weight: normal;
@@ -88,13 +98,13 @@ polyline{
         
         .gauge .indicator {
             stroke: #EE3311;
-            fill: #000;
+            fill: #98abc5;
             stroke-width: 4px;
         }
 
         /* css formats for the segment display */
         .segdisplay .on {
-            fill: #fff;
+            fill: #98abc5;
         }
 
         .segdisplay .off {
@@ -232,7 +242,7 @@ var avg1 = 0;
 var total2 = 0;
 var avg2 = 0;
 
-var ws = new WebSocket("ws://10.19.223.194:81");
+var ws = new WebSocket("ws://10.19.219.213:81");
 ws.onopen = function() 
 {
 	ws.send("x4");
@@ -244,6 +254,8 @@ function buildLineGraph() {
       random = function() { return Math.random() * (40 - 30) + 39},
       data1 = d3.range(n).map(random);
       data2 = d3.range(n).map(random);
+      data3 = d3.range(n).map(random);
+      data4 = d3.range(n).map(random);
   var margin = {top: 30, right: 60, bottom: 30, left: 60},
       width = 1420 - margin.left - margin.right, //1300
       height = 580 - margin.top - margin.bottom;
@@ -285,7 +297,19 @@ function buildLineGraph() {
     .datum(data2)
     .attr("class", "line2")
     .attr("d", line);
-  return {update: function(newData1, newData2) {
+  var path3 = svg.append("g")
+    .attr("clip-path", "url(#clip)")
+    .append("path")
+    .datum(data3)
+    .attr("class", "line3")
+    .attr("d", line);
+  var path4 = svg.append("g")
+    .attr("clip-path", "url(#clip)")
+    .append("path")
+    .datum(data4)
+    .attr("class", "line4")
+    .attr("d", line);
+  return {update: function(newData1, newData2, newData3, newData4) {
 		  data1.push(parseInt(newData1));
 		  // redraw the line, and slide it to the left
 		  path1
@@ -308,6 +332,28 @@ function buildLineGraph() {
 		      .attr("transform", "translate(" + x(-1) + ",0)");
 		  // pop the old data1 point off the front
 		  data2.shift();
+		  data3.push(parseInt(newData3));
+		  // redraw the line, and slide it to the left
+		  path3
+		      .attr("d", line)
+		      .attr("transform", null)
+		    .transition()
+		      .duration(700)
+		      .ease("linear")
+		      .attr("transform", "translate(" + x(-1) + ",0)");
+		  // pop the old data1 point off the front
+		  data3.shift();
+		  data4.push(parseInt(newData4));
+		  // redraw the line, and slide it to the left
+		  path4
+		      .attr("d", line)
+		      .attr("transform", null)
+		    .transition()
+		      .duration(700)
+		      .ease("linear")
+		      .attr("transform", "translate(" + x(-1) + ",0)");
+		  // pop the old data1 point off the front
+		  data4.shift();
     }};
 }
 
@@ -697,7 +743,7 @@ ws.onmessage = function(evt) {
 	    avg1 = total1/ticks;
 	    avg2 = total2/ticks;
 
-	    lineGraph.update(msg_array[2], msg_array[3]);
+	    lineGraph.update(msg_array[2], msg_array[3], parseInt(msg_array[4]), parseInt(msg_array[5]));
 	    speedometre.update(parseInt(msg_array[2]) + parseInt(msg_array[3]));
 	    //pie.update();
 
@@ -711,6 +757,7 @@ ws.onmessage = function(evt) {
 		freemem = parseInt(msg_array[2]);
 	}
 	    document.getElementById("log").innerHTML = 
+		"Outlet IP: 10.19.223.194 <br /> " +
 	    	"Uptime: " + Math.floor(uptime/1000/60/60) + "h" + Math.floor(uptime/1000/60%60) + "m" + Math.floor(uptime/1000%60) + "s" + "<br />" + 
 		"Free Memory: " + freemem/1000 + "kb" +  "<br />" + 
 		"Last Message: " + lastmes;
