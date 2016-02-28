@@ -42,6 +42,10 @@ const char* pass = "welcometoUBC!";
 
 ThreadController threadController = ThreadController();
 
+bool msg = false;
+char _relay;
+int _state;
+
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
 	switch(type) {
 		case WStype_DISCONNECTED: {
@@ -56,12 +60,11 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 			// r[relay][state]
 			if(text.startsWith("r") && text.length() == 3) {
 				char relay = text.charAt(1);
-				char state = text.charAt(2);
-				if(relay == '1') {
-					digitalWrite(1, state == '1' ? HIGH : LOW);
-				} else if(relay == '2') {
-					digitalWrite(2, state == '1' ? HIGH : LOW);
-				}
+				int state = text.charAt(2) == '1' ? HIGH : LOW;
+				msg = true;
+				_relay = relay;
+				_state = state;
+				yield();
 				String res = "setting relay ";
 				res.concat(relay);
 				res.concat(" to state ");
@@ -129,6 +132,8 @@ void diagnosticsThreadCallback() {
 	val.concat(millis());
 	val.concat(":");
 	val.concat(ESP.getFreeHeap());
+	val.concat(":");
+	val.concat(ESP.getResetInfo());
 	Serial.println(val);
 	webSocket.broadcastTXT(val);
 }
@@ -181,17 +186,19 @@ float readCurrent(int pin){
 	if(pin == 1){
 		digitalWrite(current1, LOW);
 		digitalWrite(current2, HIGH);
+		delay(5);
 		return maxCurrent();
 	}
 	else if(pin==2){
 		digitalWrite(current2, LOW);
 		digitalWrite(current1, HIGH);
+		delay(5);
 		return maxCurrent();
 	}
 }
 
 void setup() {
-	SPIFFS.begin();
+	//SPIFFS.begin();
 	Serial.begin(115200);
 
 	// SPI and Pin Setup
@@ -279,6 +286,18 @@ void loop() {
 	// Current get:
 	// run readCurrent(1); - specify current 1 or two. Returns float. 
 	// use digitalwrite(relay1, HIGH), etc to turn on relays
+	if(msg) {
+		msg = false;
+		if(_relay == '1') {
+			delay(20);
+			digitalWrite(relay1, _state);
+			delay(20);
+		} else if(_relay == '2') {
+			delay(20);
+			digitalWrite(relay2, _state);
+			delay(20);
+		}
+	}
 
 	webSocket.loop();
 	webServer.handleClient();
