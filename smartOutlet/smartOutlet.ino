@@ -10,11 +10,25 @@
 #include "Thread.h"
 #include "ThreadController.h"
 
+#include <SPI.h>
+
+
 ESP8266WebServer webServer(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 #define SENSOR_POLL_RATE_HZ 1
 #define USE_WIFI_STA//USE_WIFI_AP
+
+// Some variables for the current measurement
+const int chipSelectPinADC = 15;
+unsigned int result = 0;
+byte inByte = 0;
+
+// Setting up the pins
+const int relay1 = 5;
+const int relay2 = 4;
+const int current1 = 13;
+const int current2 = 2;
 
 #if defined(USE_WIFI_AP)
 IPAddress apIP(192, 168, 1, 1);
@@ -98,8 +112,80 @@ void currentThreadCallback() {
 	webSocket.broadcastTXT(val);
 }
 
+unsigned int readADC(){
+  	digitalWrite(chipSelectPinADC, LOW);	// Tell ADC to take a reading
+	result = SPI.transfer(0x00);	// Get first 8 bits
+	result = result << 8;	// Shift first 8 bits over
+	inByte = SPI.transfer(0x00);	// Get second 8 bits
+	result = result | inByte;	// Slam them together
+	digitalWrite(chipSelectPinADC, HIGH);	// ADC off
+	result = result >> 1;	// Get rid of bad bit at the end
+	result = result & 0b0000111111111111;	// Snag the 12 bits of info
+	return result;
+	// Serial.println(result); // can bring this in if debugging is needed
+	// delay(100);  // avoid the use of delays, use yield(); instead
+	result = 0x00;  
+}
+
+float maxCurrent(){
+  int maxI = 0;
+  int minI = 4000;
+  int currentIn = 0;
+  for(int i = 0; i < 50; i++){
+    currentIn = readADC();
+    if(currentIn > maxI) maxI = currentIn;
+    else if(currentIn < minI) minI = currentIn;
+    delay(5);	// may need to remove this delay
+  }
+
+  int dcOffset = minI + ((maxI - minI)/2);  // find the DC offset (the value the sensor gives at zero current)
+  int difference = maxI - dcOffset; //find the amplitude of the + current
+
+  const float vPerDiv = 0.00081764;  // convert ADC to voltage
+  const float ampsPerVolt = 0.09;
+
+  float current = difference * vPerDiv; // turn it into a voltage
+  current = current / ampsPerVolt;    // scale the voltage into the ADC to find actual current
+  current *= 1000;  // turn into Milliamps
+  
+  if(current < 150) current = 0;  // get rid of any small currents (caused by ADC noise)
+  
+  current /= 1.4142;  // this gets us into the RMS current
+
+  return current;
+}
+
+float readCurrent(int pin){
+	// they are PNP transistors, to turn them on (connect current sensor to ADC) you write a low
+	if(pin == 1){
+		digitalWrite(current1, LOW);
+		digitalWrite(current2, HIGH);
+		return maxCurrent();
+	}
+	else if(pin==2){
+		digitalWrite(current2, LOW);
+		digitalWrite(current1, HIGH);
+		return maxCurrent();
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
+
+	// SPI and Pin Setup
+	SPI.begin();
+	SPI.setFrequency(1000000);
+	SPI.setBitOrder(MSBFIRST);
+	pinMode(chipSelectPinADC, OUTPUT);
+	pinMode(relay1, OUTPUT);
+	pinMode(relay2, OUTPUT);
+	pinMode(current1, OUTPUT);
+	pinMode(current2, OUTPUT);
+	digitalWrite(chipSelectPinADC, HIGH);	// ADC off
+	digitalWrite(current1, HIGH);
+	digitalWrite(current2, HIGH);	// current sensors disconnected
+
+
 	#ifdef defined(USE_WIFI_AP)
 	WiFi.mode(WIFI_AP);
 	WiFi.softAPConfig(apIP, apIP, netMask); 
@@ -160,6 +246,11 @@ void setup() {
 }
 
 void loop() {
+
+	// Current get:
+	// run readCurrent(1); - specify current 1 or two. Returns float. 
+	// use digitalwrite(relay1, HIGH), etc to turn on relays
+
 	webSocket.loop();
 	webServer.handleClient();
 	ArduinoOTA.handle();
