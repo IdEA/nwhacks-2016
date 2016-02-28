@@ -50,6 +50,16 @@ svg {
   shape-rendering: crispEdges;
 }
 
+path.slice{
+	stroke-width:2px;
+}
+polyline{
+	opacity: .3;
+	stroke:black;
+	stoke-width: 2px;
+	fill:none;
+}
+
 /* css formats for the gauge */
         .gauge .domain {
             stroke-width: 2px;
@@ -100,8 +110,8 @@ svg {
 
       <div id="total_usage" class="card blue-grey darken-3 h1_3">
         <div class="card-content white-text center-align">
-          <span class="card-title">Total Usage</span>
-		<div id="pie"></div>
+          <span class="card-title">Diagnostics</span>
+	  <div id="log"></div>
         </div>
       </div>
 
@@ -350,55 +360,187 @@ function buildSpeedometer() {
 }
 
 function buildPie() {
-	var data1 = [{
-			"name":"Outlet 1",
-			"value":Math.floor(avg1)
-	             }, {
-			"name":"Outlet 2",
-			"value":Math.floor(avg2)
-		     }];
+		/*
+		var data1 = [{
+				"name":"Outlet 1",
+				"value":Math.floor(avg1)
+			     }, {
+				"name":"Outlet 2",
+				"value":Math.floor(avg2)
+			     }];
+		var width = 250;
+		var height = 250;
+		var radius = 250/2;
+		var color = d3.scale.ordinal()
+				    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+		var arc = d3.svg.arc()
+			.outerRadius(radius-10)
+			.innerRadius(radius-70);
+
+		var pie = d3.layout.pie()
+			.sort(null)
+			.value(function(d) {
+				return d.value;
+			});
+		var svg = d3.select("#pie").append("svg")
+			.attr("width", width)
+			.attr("height", height)
+			.append("g")
+			.attr("id", "pieChart")
+			.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+		var path = svg.selectAll("path")
+			.data(pie(data1))
+			.enter()
+			.append("path");
+
+		path.append("text")
+			.attr("transform", function (d) {
+				return "translate(" + arc.centroid(d) + ")";
+			})
+			.attr("dy", ".35em")
+			.style("text-anchor", "middle")
+			.text(function (d) {
+				return d.data.name;
+			});
+
+		path.transition()
+			.duration(1000)
+			.attr("fill", function(d, i) {
+				return color(d.data.name);
+			})
+			.attr("d", arc)
+			.each(function(d) {
+				this._current = d;
+			});
+
+		function arcTween(a) {
+			var i = d3.interpolate(this._current, a);
+			this._current = i(0);
+			return function(t) {
+				return arc(i(t));
+			}
+		}
+	*/
+	var svg = d3.select("#pie")
+		.append("svg")
+		.append("g");
+	svg.append("g")
+		.attr("class", "slices");
+	svg.append("g")
+		.attr("class", "labels");
+	svg.append("g")
+		.attr("class", "lines");
+
 	var width = 250;
-	var height = 250;
-	var radius = 250/2;
-	var color = d3.scale.ordinal()
-			    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
-	var arc = d3.svg.arc()
-		.outerRadius(radius-10)
-		.innerRadius(radius-70);
+	var height = 117;
+	var radius = 117/2;
+
 	var pie = d3.layout.pie()
 		.sort(null)
 		.value(function(d) {
 			return d.value;
 		});
-	var svg = d3.select("#pie").append("svg")
-		.attr("width", width)
-		.attr("height", height)
-		.append("g")
-		.attr("id", "pieChart")
-		.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+	
+	var arc = d3.svg.arc()
+		.outerRadius(radius*0.8)
+		.innerRadius(radius*0.4);
+	
+	var outerArc = d3.svg.arc()
+		.innerRadius(radius * 0.9)
+		.outerRadius(radius * 0.9);
 
-	var path = svg.selectAll("path")
-		.data(pie(data1))
-		.enter()
-		.append("path");
+	svg.attr("transform", "translate(" + width/2 + "," + height/2 + ")");
+	var key = function(d) { return d.data.name; };
 
-	path.transition()
-		.duration(1000)
-		.attr("fill", function(d, i) {
-			return color(d.data.name);
+	var color = d3.scale.ordinal()
+		.domain(["Outlet 1", "Outlet 2"])
+		.range(["#98abc5", "#8a89a6"]);
+	change([{"name":"Outlet 1", "value":avg1},
+		{"name":"Outlet 2", "value":avg2}])
+	
+	function change(data) {
+		var slice = svg.select(".slices").selectAll("path.slice").data(pie(data), key);
+		slice.enter()
+			.insert("path")
+			.style("fill", function (d) { return color(d.data.name); })
+			.attr("class", "slice");
+		
+		slice.transition().duration(1000)
+		     .attrTween("d", function (d) {
+		     	this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function (t) {
+				return arc(interpolate(t));
+			};
 		})
-		.attr("d", arc)
-		.each(function(d) {
-			this._current = d;
+
+		slice.exit()
+			.remove();
+
+		var text = svg.select(".labels").selectAll("text")
+			.data(pie(data), key);
+
+		text.enter()
+			.append("text")
+			.attr("dy", ".35em")
+			.text(function(d) {
+				return d.data.name;
+			});
+		function midAngle(d) {
+			return d.startAngle + (d.endAngle - d.startAngle)/2;
+			}
+
+		text.transition().duration(1000)
+		.attrTween("transform", function(d) {
+			this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function(t) {
+				var d2 = interpolate(t);
+				var pos = outerArc.centroid(d2);
+				pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+				return "translate("+ pos +")";
+			};
+		})
+		.styleTween("text-anchor", function(d){
+			this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function(t) {
+				var d2 = interpolate(t);
+				return midAngle(d2) < Math.PI ? "start":"end";
+			};
 		});
 
-	function arcTween(a) {
-		var i = d3.interpolate(this._current, a);
-		this._current = i(0);
-		return function(t) {
-			return arc(i(t));
-		}
-	}
+		text.exit()
+			.remove();
+
+	var polyline = svg.select(".lines").selectAll("polyline")
+		.data(pie(data), key);
+	
+	polyline.enter()
+		.append("polyline");
+
+	polyline.transition().duration(1000)
+		.attrTween("points", function(d){
+			this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function(t) {
+				var d2 = interpolate(t);
+				var pos = outerArc.centroid(d2);
+				pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+				return [arc.centroid(d2), outerArc.centroid(d2), pos];
+			};			
+		});
+	
+	polyline.exit()
+		.remove();
+	};
+
+
 			
 	return {update: function(newData) {
 		console.log("WITHIN: " + avg1);
@@ -410,10 +552,15 @@ function buildPie() {
 			"name":"Outlet 2",
 			"value":Math.floor(avg2)
 		     }];
+		/*
 		path.data(pie(data2));
+		path.text(pie(data2));
 		path.transition().duration(1000)
 			.attrTween("d", arcTween);
-		}};
+		*/
+		change(data2);
+		}
+};
 
 }
 
@@ -529,13 +676,17 @@ function buildBarChart() {
 	
 var lineGraph = buildLineGraph();
 var speedometre = buildSpeedometer();
-var pie = buildPie();
+//var pie = buildPie();
 var bar = buildBarChart();
+
+var uptime = 0;
+var freemem = 0;
+var lastmes;
 
 ws.onmessage = function(evt) {
 	var received_msg = evt.data;
 	var msg_array = received_msg.split(':');
-	if (msg_array[1] === 'current'){
+	if (msg_array[0] === 'data'){
 	    ttotal += parseInt(msg_array[2]) + parseInt(msg_array[3]);
 	    ticks++;
 	    tavg = ttotal/ticks;
@@ -548,11 +699,21 @@ ws.onmessage = function(evt) {
 
 	    lineGraph.update(msg_array[2], msg_array[3]);
 	    speedometre.update(parseInt(msg_array[2]) + parseInt(msg_array[3]));
-	    pie.update();
+	    //pie.update();
+
+	    lastmes = received_msg;
 	    console.log("Total Average: " + tavg);
 	    console.log("Average 1: " + avg1);
 	    console.log("Average 2: " + avg2);
 	}
+	else if (msg_array[0] === 'diag') {
+		uptime = parseInt(msg_array[1]);
+		freemem = parseInt(msg_array[2]);
+	}
+	    document.getElementById("log").innerHTML = 
+	    	"Uptime: " + Math.floor(uptime/1000/60/60) + "h" + Math.floor(uptime/1000/60%60) + "m" + Math.floor(uptime/1000%60) + "s" + "<br />" + 
+		"Free Memory: " + freemem/1000 + "kb" +  "<br />" + 
+		"Last Message: " + lastmes;
 
 }
 function relayChange(switchElem, relayNum) {
