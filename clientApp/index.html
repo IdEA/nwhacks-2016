@@ -141,7 +141,7 @@ svg {
               <div class="switch">
                 <label>
                   Off
-                  <input type="checkbox">
+                  <input type="checkbox" onchange="relayChange(this, 1)">
                   <span class="lever"></span>
                   On
                 </label>
@@ -157,7 +157,7 @@ svg {
               <div class="switch">
                 <label>
                   Off
-                  <input type="checkbox">
+                  <input type="checkbox" onchange="relayChange(this, 2)">
                   <span class="lever"></span>
                   On
                 </label>
@@ -173,7 +173,7 @@ svg {
               <div class="switch">
                 <label>
                   Off
-                  <input type="checkbox">
+                  <input type="checkbox" onchange="relayChange(this, 3)">
                   <span class="lever"></span>
                   On
                 </label>
@@ -189,7 +189,7 @@ svg {
               <div class="switch">
                 <label>
                   Off
-                  <input type="checkbox">
+                  <input type="checkbox" onchange="relayChange(this, 4)">
                   <span class="lever"></span>
                   On
                 </label>
@@ -301,11 +301,12 @@ function buildSpeedometer() {
 
         svg.append("g")
                 .attr("class", "segdisplay")
-                .attr("transform", "translate(130, 200)")
+                .attr("transform", "translate(160, 200)")
                 .call(segDisplay);
 
         svg.append("g")
                 .attr("class", "gauge")
+                .attr("transform", "translate(30, 0)")
                 .call(gauge);
 
         segDisplay.value(56749);
@@ -331,6 +332,13 @@ ws.onmessage = function(evt) {
 	}
 
 }
+function relayChange(switchElem, relayNum) {
+  var state = switchElem.checked==true?"1":"0";
+  var toSend = "r" + relayNum + state;
+  ws.send(toSend);
+  console.log(toSend);
+}
+
 </script>
 </body>
 </html>
