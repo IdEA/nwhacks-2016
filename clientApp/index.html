@@ -129,14 +129,14 @@ polyline{
     <div class="col s6">
       <div id="weekly_usage" class="card blue-grey darken-3 h1_3">
         <div class="card-content white-text center-align">
-          <span class="card-title">Weekly Usage</span>
+          <span class="card-title">Weekly Power Usage (kWh)</span>
         </div>
       </div>
     </div>
     <div class="col s3">
       <div class="card blue-grey darken-3 h1_3">
         <div id="hourly_usage" class="card-content white-text center-align">
-          <span class="card-title">Live Usage</span>
+          <span class="card-title">Live Power Usage (W)</span>
         </div>
       </div>
     </div>
@@ -145,7 +145,7 @@ polyline{
     <div class="col s9">
       <div id="live_usage" class="card blue-grey darken-3 h2_3">
         <div class="card-content white-text center-align">
-          <span class="card-title">Live Power Usage</span>
+          <span class="card-title">Live Current Usage (mA)</span>
         </div>
       </div>
     </div>
@@ -254,6 +254,19 @@ ws.onopen = function()
 	ws.send("x4");
 }
 
+function handler() {
+  console.log("lost connection");
+  location.reload();
+}
+ws.onerror = function () {
+  console.log("lost connection");
+  location.reload();
+}
+ws.onclose = function () {
+  console.log("lost connection");
+  location.reload();
+}
+
 function buildLineGraph() {
   var n = 60,
       //random = d3.random.normal(0, .2),
@@ -299,7 +312,7 @@ function buildLineGraph() {
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
-      .text("Power Usage (W)");
+      .text("Current (mA)");
   var path1 = svg.append("g")
     .attr("clip-path", "url(#clip)")
     .append("path")
@@ -390,7 +403,7 @@ function buildSpeedometer() {
                 .tickSize(10, 8, 10)
                 .tickPadding(5)
                 .scale(d3.scale.linear()
-                        .domain([0, 700])
+                        .domain([0, 100])
                         .range([-3*Math.PI/4, 3*Math.PI/4]));
 
         var segDisplay = iopctrl.segdisplay()
@@ -414,8 +427,8 @@ function buildSpeedometer() {
     
 
 	return {update: function(newData) {
-		gauge.value(newData);
-		segDisplay.value(newData);
+		gauge.value(newData / 1000 * 120);
+		segDisplay.value(newData / 1000 * 120);
 		}};
 
 }
@@ -700,7 +713,7 @@ function buildBarChart() {
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
-      .text("Power Usage (W)");
+      .text("Power Usage (kWh)");
 
   var state = svg.selectAll(".state")
       .data(data)
